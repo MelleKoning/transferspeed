@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package imagedata;
+
+option go_package = "github.com/MelleKoning/transferspeed/api/proto";
+
+message ImageRequest {
+    // You can add any additional fields related to the image request here
+}
+
+message ImageChunk {
+    bytes chunk_data = 1;
+}
+
+service ImageService {
+    rpc GetImage(ImageRequest) returns (stream ImageChunk);
+}
