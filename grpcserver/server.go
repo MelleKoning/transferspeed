@@ -1,6 +1,8 @@
 package grpcserver
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -13,16 +15,23 @@ import (
 
 type ImgServer struct {
 	imagedata.UnimplementedImageServiceServer
+	fileBuf []byte // in memory file
+}
+
+func New() *ImgServer {
+	// Open the file to be streamed
+	file, err := os.ReadFile("../data/lionface.jpg")
+	if err != nil {
+		fmt.Print(err)
+	}
+
+	return &ImgServer{
+		fileBuf: file,
+	}
 }
 
 func (s *ImgServer) GetImage(req *imagedata.ImageRequest, stream imagedata.ImageService_GetImageServer) error {
-
-	// Open the file to be streamed
-	file, err := os.Open("../data/lionface.jpg")
-	if err != nil {
-		return err
-	}
-	defer file.Close()
+	reader := bytes.NewReader(s.fileBuf)
 
 	// Create a buffer of size 1Mb
 	bufferSize := int64(1 * 1024 * 1024) // 1Mb
@@ -33,22 +42,22 @@ func (s *ImgServer) GetImage(req *imagedata.ImageRequest, stream imagedata.Image
 	// Read data from the file in chunks and send them over the stream
 	for {
 		// Read a chunk of data from the file
-		n, err := file.Read(buffer)
-		if err != nil && err != io.EOF {
-			return err
+		n, err := reader.Read(buffer)
+		if n > 0 {
+			// Send the chunk over the stream
+			sendErr := stream.Send(&imagedata.ImageChunk{
+				ChunkData: buffer[:n],
+			})
+			if sendErr != nil {
+				return sendErr
+			}
 		}
-
-		// Send the chunk over the stream
-		err = stream.Send(&imagedata.ImageChunk{
-			ChunkData: buffer[:n],
-		})
 		if err != nil {
-			return err
-		}
+			if err == io.EOF {
+				break // Exit the loop if we reach the end of the file
+			}
 
-		// Check if the end of the file is reached
-		if err == io.EOF {
-			break
+			return err
 		}
 	}
 
