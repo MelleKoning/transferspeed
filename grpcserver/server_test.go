@@ -22,8 +22,9 @@ func (m *mockImageService_GetImageServer) Send(chunk *imagedata.ImageChunk) erro
 
 // In your test function
 func TestGetImage(t *testing.T) {
+	testfile := "../data/lionheadbig.jpg"
 	mockStream := &mockImageService_GetImageServer{}
-	imgServer := New()
+	imgServer := New(testfile)
 
 	// Assuming you have a way to set the file path or mock os.Open
 	err := imgServer.GetImage(nil, mockStream)
@@ -32,7 +33,7 @@ func TestGetImage(t *testing.T) {
 	}
 
 	// the received data should now match the file contents
-	fileData, err := os.ReadFile("../data/lionface.jpg")
+	fileData, err := os.ReadFile(testfile)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -43,11 +44,13 @@ func TestGetImage(t *testing.T) {
 }
 
 func BenchmarkGetImage(b *testing.B) {
+	testfile := "../data/lionheadbig.jpg"
+
 	mockStream := &mockImageService_GetImageServer{}
-	imgServer := New()
+	imgServer := New(testfile)
 
 	// the received data should now match the file contents
-	fileData, err := os.ReadFile("../data/lionface.jpg")
+	fileData, err := os.ReadFile(testfile)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -65,5 +68,5 @@ func BenchmarkGetImage(b *testing.B) {
 	if !bytes.Equal(fileData, mockStream.receivedData) {
 		b.Errorf("Expected data does not match received data")
 	}
-	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N)/1e6), "ms/op")
+	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
 }

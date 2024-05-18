@@ -8,40 +8,44 @@ import (
 
 	imagedata "github.com/MelleKoning/transferspeed/api/proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
-type ImageSvcClient struct {
-	client imagedata.ImageServiceClient
+type ImageStreamer struct {
+	conn          *grpc.ClientConn
+	requestclient imagedata.ImageServiceClient
 }
 
-func New(address string) *ImageSvcClient {
+func New(address string) (*ImageStreamer, func() error) {
 	// Set up a connection to the server
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(nil))
+	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-	defer conn.Close()
 
-	// Create a new client
-	client := imagedata.NewImageServiceClient(conn)
-	return &ImageSvcClient{
-		client: client,
+	requestclient := imagedata.NewImageServiceClient(conn)
+
+	c := &ImageStreamer{
+		conn:          conn,
+		requestclient: requestclient,
 	}
+
+	return c, c.Close
 }
 
-func (imgsvcclient *ImageSvcClient) GetImage() []byte {
-
+func (imgsvcclient *ImageStreamer) Close() error {
+	return imgsvcclient.conn.Close()
+}
+func (imgsvcclient *ImageStreamer) GetImage() []byte {
 	// Create a request
 	request := &imagedata.ImageRequest{
 		// Set your request parameters here
 	}
-
 	// Make the gRPC request
-	stream, err := imgsvcclient.client.GetImage(context.Background(), request)
+	stream, err := imgsvcclient.requestclient.GetImage(context.Background(), request, grpc.WaitForReady(true))
 	if err != nil {
 		log.Fatalf("Failed to get image: %v", err)
 	}
-
 	// Create a buffer to store the concatenated chunks
 	var buffer bytes.Buffer
 
@@ -50,6 +54,7 @@ func (imgsvcclient *ImageSvcClient) GetImage() []byte {
 		response, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF {
+				log.Println("image received")
 				break
 			}
 			log.Fatalf("Failed to receive image chunk: %v", err)

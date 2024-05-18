@@ -18,9 +18,9 @@ type ImgServer struct {
 	fileBuf []byte // in memory file
 }
 
-func New() *ImgServer {
+func New(testfile string) *ImgServer {
 	// Open the file to be streamed
-	file, err := os.ReadFile("../data/lionface.jpg")
+	file, err := os.ReadFile(testfile)
 	if err != nil {
 		fmt.Print(err)
 	}
@@ -64,21 +64,24 @@ func (s *ImgServer) GetImage(req *imagedata.ImageRequest, stream imagedata.Image
 	return nil
 }
 
-func NewImageServer() imagedata.ImageServiceServer {
+func NewImageServer(port string, servefile string) (imagedata.ImageServiceServer, func() error, error) {
 	// Create a new gRPC server
-	lis, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", port)
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		return nil, nil, err
 	}
+
 	s := grpc.NewServer()
-	imgServer := &ImgServer{}
+	imgServer := New(servefile)
 	imagedata.RegisterImageServiceServer(s, imgServer)
 
-	// Start the server
-	log.Println("Server started on port :50051")
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
+	go func() {
+		// Start the server
+		log.Println("Server started on port :50051")
+		if err := s.Serve(lis); err != nil {
+			log.Printf("Closing serverport: %v", err)
+		}
+	}()
 
-	return imgServer
+	return imgServer, lis.Close, nil
 }
