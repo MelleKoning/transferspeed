@@ -1,6 +1,7 @@
 package httpclient_test
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"os"
@@ -12,15 +13,22 @@ import (
 )
 
 func TestServerAndC(t *testing.T) {
+	// arrange loading the testfile for comparison
+	testfile := "../data/lionheadbig.jpg"
+	loadfile, err := os.ReadFile(testfile)
+	if err != nil {
+		t.Fail()
+	}
+
 	serverPort := 3333
 
 	srvPort := fmt.Sprintf(":%d", serverPort)
-	closeServer, err := httpserver.New(srvPort)
+	closeServer, err := httpserver.New(srvPort, testfile)
 	if err != nil {
 		t.Fail()
 	}
 	defer func() {
-		err := closeServer()
+		err := closeServer.Close()
 		if err != nil {
 			fmt.Print(err)
 		}
@@ -40,5 +48,12 @@ func TestServerAndC(t *testing.T) {
 		fmt.Printf("client: could not read response body: %s\n", err)
 		os.Exit(1)
 	}
-	fmt.Printf("client: response body: %s\n", resBody)
+
+	// compare bytes response with expected response
+	if !(bytes.Equal(resBody, loadfile)) {
+		t.Fatalf("not equal")
+	}
+
+	_ = os.WriteFile("../data/tmphttpclient.jpg", resBody, os.ModePerm)
+
 }

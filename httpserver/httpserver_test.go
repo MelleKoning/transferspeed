@@ -1,7 +1,9 @@
 package httpserver_test
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"testing"
@@ -12,14 +14,15 @@ import (
 
 func TestHttpServer(t *testing.T) {
 	serverPort := 3333
+	testfile := "../data/lionheadbig.jpg"
 
 	srvPort := fmt.Sprintf(":%d", serverPort)
-	closeServer, err := httpserver.New(srvPort)
+	cSrv, err := httpserver.New(srvPort, testfile)
 	if err != nil {
 		t.Fail()
 	}
 	defer func() {
-		err := closeServer()
+		err := cSrv.Close()
 		if err != nil {
 			fmt.Print(err)
 		}
@@ -39,5 +42,22 @@ func TestHttpServer(t *testing.T) {
 	// assert that the returned code is 200 OK
 	if 200 != res.StatusCode {
 		t.Fail()
+	}
+
+	// read response body..
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		fmt.Printf("error reading response body: %s\n", err)
+	}
+	defer res.Body.Close()
+
+	loadfile, err := os.ReadFile(testfile)
+	if err != nil {
+		t.Fail()
+	}
+
+	if !bytes.Equal(body, loadfile) {
+		t.Fatalf("not the same")
+
 	}
 }

@@ -3,36 +3,53 @@ package httpserver
 import (
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
+	"os"
 )
 
-// getImage writes the reponse to `w` based on the incoming request `r`.
-func getImage(w http.ResponseWriter, r *http.Request) {
-	fmt.Print("got http image request")
-	io.WriteString(w, "this is my website")
+// CustomServer extends http.Server with additional fields
+type CustomServer struct {
+	*http.Server
+	filebuf []byte
 }
 
-// setup the http server
-func New(httpport string) (func() error, error) {
+// setup the http server with custom data
+func New(httpport string, testfile string) (*CustomServer, error) {
 	mux := http.NewServeMux()
-	mux.HandleFunc("/getimage", getImage)
 
-	// initialize http server instance
-	server := &http.Server{
-		Addr:    httpport,
-		Handler: mux,
+	// Open the file to be streamed
+	file, err := os.ReadFile(testfile)
+	if err != nil {
+		fmt.Print(err)
 	}
 
+	// initialize custom http server instance
+	cSrv := &CustomServer{
+		Server: &http.Server{
+			Addr:    httpport,
+			Handler: mux,
+		},
+		filebuf: file,
+	}
+	mux.HandleFunc("/getimage", cSrv.getImage)
+
 	go func() {
-		err := server.ListenAndServe()
+		err := cSrv.Server.ListenAndServe()
 		if errors.Is(err, http.ErrServerClosed) {
 			fmt.Printf("server closed\n")
 		} else if err != nil {
 			fmt.Printf("error starting server: %s\n", err)
-
 		}
 	}()
 
-	return server.Close, nil
+	return cSrv, nil
+}
+
+// getImage writes the reponse to `w` based on the incoming request `r`.
+func (c *CustomServer) getImage(w http.ResponseWriter, r *http.Request) {
+	fmt.Print("got http image request")
+	_, err := w.Write(c.filebuf)
+	if err != nil {
+		fmt.Printf("can not write data %v", err)
+	}
 }
