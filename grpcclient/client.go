@@ -18,7 +18,9 @@ type ImageStreamer struct {
 
 func New(address string) (*ImageStreamer, func() error) {
 	// Set up a connection to the server
-	conn, err := grpc.Dial(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.Dial(address,
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*10)))
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
@@ -42,7 +44,7 @@ func (imgsvcclient *ImageStreamer) GetImage() []byte {
 		// Set your request parameters here
 	}
 	// Make the gRPC request
-	stream, err := imgsvcclient.requestclient.GetImage(context.Background(), request, grpc.WaitForReady(true))
+	stream, err := imgsvcclient.requestclient.GetImage(context.Background(), request)
 	if err != nil {
 		log.Fatalf("Failed to get image: %v", err)
 	}
@@ -54,7 +56,7 @@ func (imgsvcclient *ImageStreamer) GetImage() []byte {
 		response, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF {
-				log.Println("image received")
+				//log.Println("image received")
 				break
 			}
 			log.Fatalf("Failed to receive image chunk: %v", err)

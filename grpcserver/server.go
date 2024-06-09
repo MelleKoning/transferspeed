@@ -33,8 +33,8 @@ func New(testfile string) *ImgServer {
 func (s *ImgServer) GetImage(req *imagedata.ImageRequest, stream imagedata.ImageService_GetImageServer) error {
 	reader := bytes.NewReader(s.fileBuf)
 
-	// Create a buffer of size 1Mb
-	bufferSize := int64(1 * 1024 * 1024) // 1Mb
+	// how much to send in one stream message
+	bufferSize := int64(10 * 1024 * 1024)
 
 	// Create a buffer to read data from the file
 	buffer := make([]byte, bufferSize)
@@ -71,7 +71,10 @@ func NewImageServer(port string, servefile string) (imagedata.ImageServiceServer
 		return nil, nil, err
 	}
 
-	s := grpc.NewServer()
+	s := grpc.NewServer(
+		grpc.MaxRecvMsgSize(1024*1024*10),
+		grpc.MaxSendMsgSize(1024*1024*10),
+	)
 	imgServer := New(servefile)
 	imagedata.RegisterImageServiceServer(s, imgServer)
 
@@ -81,6 +84,8 @@ func NewImageServer(port string, servefile string) (imagedata.ImageServiceServer
 		if err := s.Serve(lis); err != nil {
 			log.Printf("Closing serverport: %v", err)
 		}
+		s.GracefulStop()
+		lis.Close()
 	}()
 
 	return imgServer, lis.Close, nil

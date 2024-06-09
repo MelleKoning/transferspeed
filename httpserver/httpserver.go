@@ -14,7 +14,7 @@ type CustomServer struct {
 }
 
 // setup the http server with custom data
-func New(httpport string, testfile string) (*CustomServer, error) {
+func New(httpport int, testfile string) (*CustomServer, error) {
 	mux := http.NewServeMux()
 
 	// Open the file to be streamed
@@ -26,7 +26,7 @@ func New(httpport string, testfile string) (*CustomServer, error) {
 	// initialize custom http server instance
 	cSrv := &CustomServer{
 		Server: &http.Server{
-			Addr:    httpport,
+			Addr:    fmt.Sprintf(":%d", httpport),
 			Handler: mux,
 		},
 		filebuf: file,
@@ -47,7 +47,7 @@ func New(httpport string, testfile string) (*CustomServer, error) {
 
 // getImage writes the reponse to `w` based on the incoming request `r`.
 func (c *CustomServer) getImage(w http.ResponseWriter, r *http.Request) {
-	fmt.Print("got http image request")
+	//fmt.Print("got http image request")
 	_, err := w.Write(c.filebuf)
 	if err != nil {
 		fmt.Printf("can not write data %v", err)

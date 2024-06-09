@@ -32,7 +32,7 @@ func TestClientWithServer(t *testing.T) {
 	os.WriteFile("../data/tmp.jpg", response, os.ModePerm)
 }
 
-func BenchmarkTestClientWithServer(b *testing.B) {
+func BenchmarkTestgRPCClientWithServer(b *testing.B) {
 	// load the server
 	testfile := "../data/lionheadbig.jpg"
 	loadfile, err := os.ReadFile(testfile)
@@ -54,9 +54,14 @@ func BenchmarkTestClientWithServer(b *testing.B) {
 	b.ResetTimer()
 	var response []byte
 
-	for n := 0; n < b.N; n++ {
-		response = c.GetImage()
-	}
+	b.RunParallel(func(pb *testing.PB) {
+		for pb.Next() {
+			response = c.GetImage()
+		}
+	})
+	//for n := 0; n < b.N; n++ {
+	//	response = c.GetImage()
+	//}
 	// compare bytes response with expected response
 	if !(bytes.Equal(response, loadfile)) {
 		b.Fatalf("not equal")

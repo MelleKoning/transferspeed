@@ -16,8 +16,7 @@ func TestHttpServer(t *testing.T) {
 	serverPort := 3333
 	testfile := "../data/lionheadbig.jpg"
 
-	srvPort := fmt.Sprintf(":%d", serverPort)
-	cSrv, err := httpserver.New(srvPort, testfile)
+	cSrv, err := httpserver.New(serverPort, testfile)
 	if err != nil {
 		t.Fail()
 	}
