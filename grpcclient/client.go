@@ -44,7 +44,10 @@ func (imgsvcclient *ImageStreamer) GetImage() []byte {
 		// Set your request parameters here
 	}
 	// Make the gRPC request
-	stream, err := imgsvcclient.requestclient.GetImage(context.Background(), request)
+	stream, err := imgsvcclient.requestclient.GetImage(
+		context.Background(),
+		request,
+	)
 	if err != nil {
 		log.Fatalf("Failed to get image: %v", err)
 	}

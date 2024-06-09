@@ -25,6 +25,7 @@ func GetImage(c *http.Client, serverPort int) *http.Response {
 		os.Exit(1)
 	}
 
+	req.Proto = "HTTP/2"
 	res, err := c.Do(req)
 	if err != nil {
 		fmt.Printf("error making http request: %s\n", err)

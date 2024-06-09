@@ -2,7 +2,9 @@ package grpcclient_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -49,23 +51,38 @@ func BenchmarkTestgRPCClientWithServer(b *testing.B) {
 
 	//time.Sleep(1 * time.Second)
 	c, close := grpcclient.New(port)
-	defer close()
+	defer func() {
+		err := close()
+		if err != nil {
+			fmt.Printf("grpc close:%v", err)
+		}
+	}()
+
+	var m sync.Map
 
 	b.ResetTimer()
 	var response []byte
 
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			response = c.GetImage()
-		}
-	})
-	//for n := 0; n < b.N; n++ {
-	//	response = c.GetImage()
-	//}
-	// compare bytes response with expected response
-	if !(bytes.Equal(response, loadfile)) {
-		b.Fatalf("not equal")
+	var n int
+	for n = 0; n < b.N; n++ {
+		response = c.GetImage()
+		m.Store(n, response)
 	}
 	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
+
+	for contenttest := 0; contenttest < n; contenttest++ {
+		// compare bytes response with expected response
+		bytesReceived, exists := m.Load(contenttest)
+		if !exists {
+			fmt.Printf("contents not found for %d?", contenttest)
+		}
+		res, converted := bytesReceived.([]byte)
+		if !converted {
+			fmt.Printf("cannot convert byte array")
+		}
+		if !(bytes.Equal(res, loadfile)) {
+			b.Fatalf("not equal")
+		}
+	}
 
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -94,33 +95,45 @@ func BenchmarkTesthttpClientWithServer(b *testing.B) {
 	client := httpclient.GetHTTPClient()
 	defer client.CloseIdleConnections()
 
+	var m sync.Map
+
 	b.ResetTimer()
 	var resBody []byte
 
-	b.RunParallel(func(pb *testing.PB) {
-		for pb.Next() {
-			//	for n := 0; n < b.N; n++ {
-			res := httpclient.GetImage(client, serverPort)
+	var n int
+	for n = 0; n < b.N; n++ {
+		res := httpclient.GetImage(client, serverPort)
 
-			if res.StatusCode != 200 {
-				b.Fail()
-			}
-
-			// write the returned response
-			resBody, err = io.ReadAll(res.Body)
-			defer res.Body.Close()
-			if err != nil {
-				fmt.Printf("client: could not read response body: %s\n", err)
-				os.Exit(1)
-			}
-
+		if res.StatusCode != 200 {
+			b.Fail()
 		}
-	}) // parallel
 
-	// compare bytes response with expected response
-	if !(bytes.Equal(resBody, loadfile)) {
-		b.Fatalf("not equal")
+		// write the returned response
+		resBody, err = io.ReadAll(res.Body)
+		m.Store(n, resBody)
+		defer res.Body.Close()
+		if err != nil {
+			fmt.Printf("client: could not read response body: %s\n", err)
+			os.Exit(1)
+		}
+
 	}
 	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
+
+	// compare bytes response with expected response
+	for contenttest := 0; contenttest < n; contenttest++ {
+		// compare bytes response with expected response
+		bytesReceived, exists := m.Load(contenttest)
+		if !exists {
+			fmt.Printf("contents not found for %d?", contenttest)
+		}
+		res, converted := bytesReceived.([]byte)
+		if !converted {
+			fmt.Printf("cannot convert byte array")
+		}
+		if !(bytes.Equal(res, loadfile)) {
+			b.Fatalf("not equal")
+		}
+	}
 
 }

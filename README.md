@@ -1,6 +1,6 @@
 # Transferspeed
 
-Transferspeed is a test repository to see if we can benchmark transferring an arbitrary binary data over grpc http/2.
+Transferspeed is a test repository to see if we can benchmark transferring an arbitrary binary data over grpc http/2. And then compare that with transferring that data using a default HTTP client.
 
 ## Working with the code
 
@@ -22,6 +22,21 @@ As a grpc-stream has a maximum capacity, based on the grpc and http/2 protocols,
 
 The `grpcclient` folder is meant to really setup the grpc communication over the network. To compare the "dummy" call to the actual grpc call, you can execute the Benchmark tests that are available in the `/grpcserver` and `/grpcclient` packages.
 
-## HTTP/1.1
+## HTTP/2
 
-To compare gRPC with HTTP/1.1 or HTTP/2, we also have folders for a `httpserver`, `httpclient` and some scaffolding in place to do a request on a dummy http `/getimage` endpoint... to be filled in with actual image transport.
+To compare gRPC with default HTTP/2, we also have folders for a `httpserver`, `httpclient` and some scaffolding in place to do a request on a dummy http `/getimage` endpoint... to be filled in with actual image transport.
+
+## Running the benchmark tests
+
+```bash
+go test ./... -bench .
+```
+
+On local system the HTTP client is faster than the gRPC implementation.
+
+Output of benchmark tests with the bigger image:
+
+```
+BenchmarkTestgRPCClientWithServer-8  16          72828138 ns/op                69.86 ms/op
+BenchmarkTesthttpClientWithServer-8  25          45018124 ns/op                42.09 ms/op
+```

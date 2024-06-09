@@ -64,6 +64,37 @@ func (s *ImgServer) GetImage(req *imagedata.ImageRequest, stream imagedata.Image
 	return nil
 }
 
+func (s *ImgServer) GetImageWithoutReader(
+	req *imagedata.ImageRequest,
+	stream imagedata.ImageService_GetImageServer,
+) error {
+	// max to send in one stream message
+	bufferSize := int64(16 * 1024 * 1024)
+
+	var at int64 // location pointer
+	for {
+		// send last chunk
+		if (at + bufferSize) > int64(len(s.fileBuf)) {
+			_ = stream.Send(&imagedata.ImageChunk{
+				ChunkData: s.fileBuf[at:int64(len(s.fileBuf))],
+			})
+			break
+		} else {
+			// Send consecutive chunk with buffersize
+			// over the stream
+			sendErr := stream.Send(&imagedata.ImageChunk{
+				ChunkData: s.fileBuf[at : bufferSize+at],
+			})
+			at += bufferSize
+			if sendErr != nil {
+				return sendErr
+			}
+		}
+	}
+
+	return nil
+}
+
 func NewImageServer(port string, servefile string) (imagedata.ImageServiceServer, func() error, error) {
 	// Create a new gRPC server
 	lis, err := net.Listen("tcp", port)
