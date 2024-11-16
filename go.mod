@@ -1,6 +1,6 @@
 module github.com/MelleKoning/transferspeed
 
-go 1.21.5
+go 1.23.3
 
 require (
 	google.golang.org/grpc v1.63.2
