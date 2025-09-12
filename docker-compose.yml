@@ -1,0 +1,14 @@
+version: '3.8'
+services:
+  transferspeedserver:
+    image: transferspeedserver
+    environment:
+      - GRPC_PORT=:50051
+  transferspeedclient:
+    image: transferspeedclient
+    dns:
+      - 127.0.0.1  # A non-existent or invalid DNS server
+    depends_on:
+      - transferspeedserver
+    environment:
+      - GRPC_SERVER_ADDRESS=transferspeedserver:50051

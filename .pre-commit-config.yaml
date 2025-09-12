@@ -1,18 +1,18 @@
 exclude: /vendor
 repos:
-- repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
-  hooks:
-  -   id: check-yaml
-  -   id: end-of-file-fixer
-  -   id: trailing-whitespace
-      exclude: vendor/
-- repo: https://github.com/golangci/golangci-lint
-  rev: v1.61.0
-  hooks:
-  - id: golangci-lint
-    name: golangci-lint
-    description: Fast linters runner for Go.
-    types: [go]
-    language: golang
-    pass_filenames: false
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: check-yaml
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+        exclude: vendor/
+  - repo: https://github.com/golangci/golangci-lint
+    rev: v2.1.2
+    hooks:
+      - id: golangci-lint
+        name: golangci-lint
+        description: Fast linters runner for Go.
+        types: [go]
+        language: golang
+        pass_filenames: false

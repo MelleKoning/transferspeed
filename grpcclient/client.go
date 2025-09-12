@@ -18,7 +18,7 @@ type ImageStreamer struct {
 
 func New(address string) (*ImageStreamer, func() error) {
 	// Set up a connection to the server
-	conn, err := grpc.Dial(address,
+	conn, err := grpc.NewClient(address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*10)))
 	if err != nil {
