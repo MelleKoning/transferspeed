@@ -16,7 +16,7 @@ func main() {
 		port = envPort
 	}
 
-	_, _, err := grpcserver.NewImageServer(port, "data/lionface.jpg")
+	_, _, err := grpcserver.NewImageServer(port)
 	if err != nil {
 		log.Fatalf("failed to start server: %v", err)
 	}

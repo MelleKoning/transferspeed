@@ -16,9 +16,9 @@ func TestHttpServer(t *testing.T) {
 	serverPort := 3333
 	testfile := "../data/lionheadbig.jpg"
 
-	cSrv, err := httpserver.New(serverPort, testfile)
+	cSrv, err := httpserver.New(serverPort)
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 	defer func() {
 		err := cSrv.Close()
@@ -29,34 +29,30 @@ func TestHttpServer(t *testing.T) {
 
 	time.Sleep(100 * time.Millisecond)
 
-	requestURL := fmt.Sprintf("http://localhost:%d/getimage", serverPort)
+	requestURL := fmt.Sprintf("http://localhost:%d/getimage?file=%s", serverPort, testfile)
 	res, err := http.Get(requestURL)
 	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
-		os.Exit(1)
+		t.Fatalf("error making http request: %s", err)
 	}
 
-	fmt.Printf("client: got response!\n")
-	fmt.Printf("client: status code: %d\n", res.StatusCode)
 	// assert that the returned code is 200 OK
-	if 200 != res.StatusCode {
-		t.Fail()
+	if http.StatusOK != res.StatusCode {
+		t.Fatalf("expected 200, got %d", res.StatusCode)
 	}
 
 	// read response body..
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		fmt.Printf("error reading response body: %s\n", err)
+		t.Fatalf("error reading response body: %s", err)
 	}
 	defer res.Body.Close()
 
 	loadfile, err := os.ReadFile(testfile)
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 
 	if !bytes.Equal(body, loadfile) {
 		t.Fatalf("not the same")
-
 	}
 }

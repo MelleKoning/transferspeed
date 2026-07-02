@@ -17,14 +17,22 @@ func TestClientWithServer(t *testing.T) {
 	testfile := "../data/lionheadbig.jpg"
 	loadfile, err := os.ReadFile(testfile)
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 
-	grpcserver.NewImageServer(":50051", testfile)
+	_, _, err = grpcserver.NewImageServer(":50051")
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	c, closeClient := grpcclient.New(":50051")
 	defer closeClient()
-	response := c.GetImage()
+	results := c.DownloadImages([]string{testfile})
+
+	response, ok := results[testfile]
+	if !ok {
+		t.Fatalf("file not found in response")
+	}
 
 	// compare bytes response with expected response
 	if !(bytes.Equal(response, loadfile)) {
@@ -39,17 +47,16 @@ func BenchmarkTestgRPCClientWithServer(b *testing.B) {
 	testfile := "../data/lionheadbig.jpg"
 	loadfile, err := os.ReadFile(testfile)
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 
 	port := ":50005"
-	_, closeServerFunc, err := grpcserver.NewImageServer(port, testfile)
+	_, closeServerFunc, err := grpcserver.NewImageServer(port)
 	if err != nil {
 		b.Fatalf("could not start server %v", err)
 	}
 	defer closeServerFunc()
 
-	//time.Sleep(1 * time.Second)
 	c, close := grpcclient.New(port)
 	defer func() {
 		err := close()
@@ -61,12 +68,12 @@ func BenchmarkTestgRPCClientWithServer(b *testing.B) {
 	var m sync.Map
 
 	b.ResetTimer()
-	var response []byte
+	var results map[string][]byte
 
 	var n int
 	for n = 0; n < b.N; n++ {
-		response = c.GetImage()
-		m.Store(n, response)
+		results = c.DownloadImages([]string{testfile})
+		m.Store(n, results[testfile])
 	}
 	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
 
@@ -85,4 +92,50 @@ func BenchmarkTestgRPCClientWithServer(b *testing.B) {
 		}
 	}
 
+}
+
+func BenchmarkTestgRPCClientWithServerTwoFiles(b *testing.B) {
+	file1 := "../data/lionface.jpg"
+	file2 := "../data/lionheadbig.jpg"
+	loadfile1, err := os.ReadFile(file1)
+	if err != nil {
+		b.Fatal(err)
+	}
+	loadfile2, err := os.ReadFile(file2)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	port := ":50006"
+	_, closeServerFunc, err := grpcserver.NewImageServer(port)
+	if err != nil {
+		b.Fatalf("could not start server %v", err)
+	}
+	defer func() {
+		err := closeServerFunc()
+		if err != nil {
+			b.Fatal(err)
+		}
+	}()
+
+	c, close := grpcclient.New(port)
+	defer func() {
+		err := close()
+		if err != nil {
+			fmt.Printf("grpc close:%v", err)
+		}
+	}()
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		results := c.DownloadImages([]string{file1, file2})
+
+		if !bytes.Equal(results[file1], loadfile1) {
+			b.Fatalf("file1 not equal")
+		}
+		if !bytes.Equal(results[file2], loadfile2) {
+			b.Fatalf("file2 not equal")
+		}
+	}
+	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
 }

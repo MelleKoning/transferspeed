@@ -2,8 +2,8 @@ package httpclient
 
 import (
 	"fmt"
+	"io"
 	"net/http"
-	"os"
 )
 
 // GetHTTPClient creates the http.Client, the idea
@@ -16,23 +16,47 @@ func GetHTTPClient() *http.Client {
 	return c
 }
 
-func GetImage(c *http.Client, serverPort int) *http.Response {
-	requestURL := fmt.Sprintf("http://localhost:%d/getimage", serverPort)
+func GetImages(c *http.Client, serverPort int, imageIDs []string) map[string][]byte {
+	results := make(map[string][]byte)
 
-	req, err := http.NewRequest(http.MethodGet, requestURL, nil)
-	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
-		os.Exit(1)
+	for _, imageID := range imageIDs {
+		requestURL := fmt.Sprintf("http://localhost:%d/getimage?file=%s", serverPort, imageID)
+
+		req, err := http.NewRequest(http.MethodGet, requestURL, nil)
+		if err != nil {
+			fmt.Printf("error creating request: %s\n", err)
+			continue
+		}
+
+		req.Proto = "HTTP/2"
+		body, err := DoRequest(c, req)
+		if err != nil {
+			fmt.Printf("error reading response body: %s\n", err)
+			continue
+		}
+		results[imageID] = body
 	}
 
-	req.Proto = "HTTP/2"
+	return results
+}
+
+func DoRequest(c *http.Client, req *http.Request) ([]byte, error) {
 	res, err := c.Do(req)
-	if err != nil {
-		fmt.Printf("error making http request: %s\n", err)
-		return nil
-	}
-	//fmt.Printf("client: got response!\n")
-	//fmt.Printf("client: status code: %d\n", res.StatusCode)
 
-	return res
+	if err != nil {
+		return nil, fmt.Errorf("error making http request: %s", err)
+	}
+	defer func() {
+		err := res.Body.Close()
+		if err != nil {
+			fmt.Printf("error closing response body: %s", err)
+		}
+	}()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("unexpected status code: %d", res.StatusCode)
+
+	}
+	body, err := io.ReadAll(res.Body)
+	return body, err
 }

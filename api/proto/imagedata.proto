@@ -4,14 +4,38 @@ package imagedata;
 
 option go_package = "github.com/MelleKoning/transferspeed/api/proto";
 
-message ImageRequest {
-    // You can add any additional fields related to the image request here
+// The request payload to initiate the stream
+message GetImagesRequest {
+  repeated string image_ids = 1;
+  string quality_preference = 2; // e.g., "high", "thumbnail"
 }
 
+// The individual chunk message containing raw payload bytes
 message ImageChunk {
-    bytes chunk_data = 1;
+  bytes data = 1;
 }
 
+// The header message sent ONCE at the start of each new image
+message ImageHeader {
+  string image_id = 1;
+  string mime_type = 2;       // e.g., "image/jpeg"
+  uint64 total_bytes = 3;     // Helps client pre-allocate memory buffers
+  uint32 width = 4;
+  uint32 height = 5;
+}
+
+// The single, unified wrapper envelope emitted continuously by the stream
+message StreamResponse {
+  // A 'oneof' field guarantees that exactly one of these properties
+  // is present per message frame, protecting stream state cleanly.
+  oneof payload {
+    ImageHeader header = 1;  // Tells the client: "Hey, look out for a new image file!"
+    ImageChunk chunk = 2;    // Emits raw byte pieces for the active image
+  }
+}
+
+// The remote service definition
 service ImageService {
-    rpc GetImage(ImageRequest) returns (stream ImageChunk);
+  // Client makes one request, Server pushes back an active stream of fragments
+  rpc DownloadImages(GetImagesRequest) returns (stream StreamResponse);
 }

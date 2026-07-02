@@ -1,7 +1,6 @@
 package grpcclient
 
 import (
-	"bytes"
 	"context"
 	"io"
 	"log"
@@ -38,39 +37,44 @@ func New(address string) (*ImageStreamer, func() error) {
 func (imgsvcclient *ImageStreamer) Close() error {
 	return imgsvcclient.conn.Close()
 }
-func (imgsvcclient *ImageStreamer) GetImage() []byte {
+func (imgsvcclient *ImageStreamer) DownloadImages(imageIDs []string) map[string][]byte {
 	// Create a request
-	request := &imagedata.ImageRequest{
-		// Set your request parameters here
+	request := &imagedata.GetImagesRequest{
+		ImageIds: imageIDs,
 	}
 	// Make the gRPC request
-	stream, err := imgsvcclient.requestclient.GetImage(
+	stream, err := imgsvcclient.requestclient.DownloadImages(
 		context.Background(),
 		request,
 	)
 	if err != nil {
-		log.Fatalf("Failed to get image: %v", err)
+		log.Fatalf("Failed to get images: %v", err)
 	}
-	// Create a buffer to store the concatenated chunks
-	var buffer bytes.Buffer
+
+	results := make(map[string][]byte)
+	var currentImageID string
 
 	// Iterate over the response stream
 	for {
 		response, err := stream.Recv()
 		if err != nil {
 			if err == io.EOF {
-				//log.Println("image received")
 				break
 			}
 			log.Fatalf("Failed to receive image chunk: %v", err)
 		}
 
-		// Append the received chunk to the buffer
-		if _, err := buffer.Write(response.ChunkData); err != nil {
-			log.Fatalf("Failed to append chunk data: %v", err)
+		switch p := response.Payload.(type) {
+		case *imagedata.StreamResponse_Header:
+			currentImageID = p.Header.ImageId
+			results[currentImageID] = []byte{}
+		case *imagedata.StreamResponse_Chunk:
+			if currentImageID == "" {
+				log.Fatal("Received chunk before header")
+			}
+			results[currentImageID] = append(results[currentImageID], p.Chunk.Data...)
 		}
-
 	}
 
-	return buffer.Bytes()
+	return results
 }

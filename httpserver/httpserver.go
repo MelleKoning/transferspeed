@@ -3,25 +3,18 @@ package httpserver
 import (
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
-	"os"
 )
 
 // CustomServer extends http.Server with additional fields
 type CustomServer struct {
 	*http.Server
-	filebuf []byte
 }
 
-// setup the http server with custom data
-func New(httpport int, testfile string) (*CustomServer, error) {
+// setup the http server
+func New(httpport int) (*CustomServer, error) {
 	mux := http.NewServeMux()
-
-	// Open the file to be streamed
-	file, err := os.ReadFile(testfile)
-	if err != nil {
-		fmt.Print(err)
-	}
 
 	// initialize custom http server instance
 	cSrv := &CustomServer{
@@ -29,16 +22,15 @@ func New(httpport int, testfile string) (*CustomServer, error) {
 			Addr:    fmt.Sprintf(":%d", httpport),
 			Handler: mux,
 		},
-		filebuf: file,
 	}
 	mux.HandleFunc("/getimage", cSrv.getImage)
 
 	go func() {
 		err := cSrv.Server.ListenAndServe()
 		if errors.Is(err, http.ErrServerClosed) {
-			fmt.Printf("server closed\n")
+			// silent close
 		} else if err != nil {
-			fmt.Printf("error starting server: %s\n", err)
+			log.Printf("error starting server: %s\n", err)
 		}
 	}()
 
@@ -47,9 +39,12 @@ func New(httpport int, testfile string) (*CustomServer, error) {
 
 // getImage writes the reponse to `w` based on the incoming request `r`.
 func (c *CustomServer) getImage(w http.ResponseWriter, r *http.Request) {
-	//fmt.Print("got http image request")
-	_, err := w.Write(c.filebuf)
-	if err != nil {
-		fmt.Printf("can not write data %v", err)
+	fileName := r.URL.Query().Get("file")
+	if fileName == "" {
+		http.Error(w, "Missing file parameter", http.StatusBadRequest)
+		return
 	}
+
+	// Use http.ServeFile to efficiently stream the file
+	http.ServeFile(w, r, fileName)
 }

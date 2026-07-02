@@ -2,10 +2,7 @@ package httpclient_test
 
 import (
 	"bytes"
-	"fmt"
-	"io"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -13,127 +10,118 @@ import (
 	"github.com/MelleKoning/transferspeed/httpserver"
 )
 
-func TestServerAndC(t *testing.T) {
-	// arrange loading the testfile for comparison
+func TestServerAndClient(t *testing.T) {
 	testfile := "../data/lionheadbig.jpg"
 	loadfile, err := os.ReadFile(testfile)
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 
-	// arrange a listening server
 	serverPort := 3333
-	httpServer, err := httpserver.New(serverPort, testfile)
+	httpServer, err := httpserver.New(serverPort)
 	if err != nil {
-		t.Fail()
+		t.Fatal(err)
 	}
 	defer func() {
 		err := httpServer.Close()
 		if err != nil {
-			fmt.Print(err)
+			t.Fatal(err)
 		}
 	}()
 
-	// provide the server some time to start
-	// listening before doing a client call
 	time.Sleep(100 * time.Millisecond)
 
-	// Act - do the http call
 	client := httpclient.GetHTTPClient()
 	defer client.CloseIdleConnections()
-	res := httpclient.GetImage(client, serverPort)
+	results := httpclient.GetImages(client, serverPort, []string{testfile})
 
-	if res.StatusCode != 200 {
-		t.Fail()
+	resBody, ok := results[testfile]
+	if !ok {
+		t.Fatalf("file not found in response")
 	}
 
-	// write the returned response
-	resBody, err := io.ReadAll(res.Body)
-	defer res.Body.Close()
-	if err != nil {
-		fmt.Printf("client: could not read response body: %s\n", err)
-		os.Exit(1)
-	}
-
-	// compare bytes response with expected response
 	if !(bytes.Equal(resBody, loadfile)) {
 		t.Fatalf("not equal")
 	}
 
-	// for human check of the received file
-	// write out the file to disk
 	_ = os.WriteFile("../data/tmphttpclient.jpg", resBody, os.ModePerm)
-
 }
 
 func BenchmarkTesthttpClientWithServer(b *testing.B) {
-	// load the server
 	testfile := "../data/lionheadbig.jpg"
 	loadfile, err := os.ReadFile(testfile)
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 
-	// arrange a listening server
 	serverPort := 3333
-	httpServer, err := httpserver.New(serverPort, testfile)
+	httpServer, err := httpserver.New(serverPort)
 	if err != nil {
-		b.Fail()
+		b.Fatal(err)
 	}
 	defer func() {
 		err := httpServer.Close()
 		if err != nil {
-			fmt.Print(err)
+			b.Fatal(err)
 		}
 	}()
 
-	// provide the server some time to start
-	// listening before doing a client call
 	time.Sleep(100 * time.Millisecond)
 
-	// Act - create client for reuse
 	client := httpclient.GetHTTPClient()
 	defer client.CloseIdleConnections()
 
-	var m sync.Map
-
 	b.ResetTimer()
-	var resBody []byte
+	for n := 0; n < b.N; n++ {
+		results := httpclient.GetImages(client, serverPort, []string{testfile})
+		resBody := results[testfile]
 
-	var n int
-	for n = 0; n < b.N; n++ {
-		res := httpclient.GetImage(client, serverPort)
-
-		if res.StatusCode != 200 {
-			b.Fail()
-		}
-
-		// write the returned response
-		resBody, err = io.ReadAll(res.Body)
-		m.Store(n, resBody)
-		defer res.Body.Close()
-		if err != nil {
-			fmt.Printf("client: could not read response body: %s\n", err)
-			os.Exit(1)
-		}
-
-	}
-	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
-
-	// compare bytes response with expected response
-	for contenttest := 0; contenttest < n; contenttest++ {
-		// compare bytes response with expected response
-		bytesReceived, exists := m.Load(contenttest)
-		if !exists {
-			fmt.Printf("contents not found for %d?", contenttest)
-		}
-		res, converted := bytesReceived.([]byte)
-		if !converted {
-			fmt.Printf("cannot convert byte array")
-		}
-		if !(bytes.Equal(res, loadfile)) {
+		if !(bytes.Equal(resBody, loadfile)) {
 			b.Fatalf("not equal")
 		}
 	}
+	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
+}
 
+func BenchmarkTesthttpClientWithServerTwoFiles(b *testing.B) {
+	file1 := "../data/lionface.jpg"
+	file2 := "../data/lionheadbig.jpg"
+	loadfile1, err := os.ReadFile(file1)
+	if err != nil {
+		b.Fatal(err)
+	}
+	loadfile2, err := os.ReadFile(file2)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	serverPort := 3333
+	httpServer, err := httpserver.New(serverPort)
+	if err != nil {
+		b.Fatal(err)
+	}
+	defer func() {
+		err := httpServer.Close()
+		if err != nil {
+			b.Fatal(err)
+		}
+	}()
+
+	time.Sleep(100 * time.Millisecond)
+
+	client := httpclient.GetHTTPClient()
+	defer client.CloseIdleConnections()
+
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		results := httpclient.GetImages(client, serverPort, []string{file1, file2})
+
+		if !bytes.Equal(results[file1], loadfile1) {
+			b.Fatalf("file1 not equal")
+		}
+		if !bytes.Equal(results[file2], loadfile2) {
+			b.Fatalf("file2 not equal")
+		}
+	}
+	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
 }

@@ -29,7 +29,9 @@ func main() {
 	}()
 
 	log.Println("Requesting image from server...")
-	imageBytes := client.GetImage()
+	// Updated to handle multiple images, defaulting to one as per original cmd/client usage
+	imageMap := client.DownloadImages([]string{"../data/lionheadbig.jpg"})
+	imageBytes := imageMap["../data/lionheadbig.jpg"]
 	log.Printf("Received image of size: %d bytes", len(imageBytes))
 
 	if err := os.WriteFile(*outputFile, imageBytes, 0644); err != nil {
