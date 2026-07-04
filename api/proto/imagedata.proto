@@ -4,7 +4,13 @@ package imagedata;
 
 option go_package = "github.com/MelleKoning/transferspeed/api/proto";
 
-// The request payload to initiate the stream
+// The request payload to initiate the stream for a single image
+message GetImageRequest {
+  string image_id = 1;
+}
+
+// The request payload to initiate the stream for multiple images
+// to be returned sequentially, one after the other, in a single stream.
 message GetImagesRequest {
   repeated string image_ids = 1;
   string quality_preference = 2; // e.g., "high", "thumbnail"
@@ -38,4 +44,8 @@ message StreamResponse {
 service ImageService {
   // Client makes one request, Server pushes back an active stream of fragments
   rpc DownloadImages(GetImagesRequest) returns (stream StreamResponse);
+
+  // GetImage is for retrieving a single image, we could use
+  // parallel calls for multiple images
+  rpc GetImage(GetImageRequest) returns (stream ImageChunk);
 }

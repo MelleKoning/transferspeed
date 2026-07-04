@@ -3,7 +3,6 @@ package grpcserver
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -12,6 +11,8 @@ import (
 	imagedata "github.com/MelleKoning/transferspeed/api/proto"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type ImgServer struct {
@@ -20,6 +21,43 @@ type ImgServer struct {
 
 func New() *ImgServer {
 	return &ImgServer{}
+}
+
+func (s *ImgServer) GetImage(
+	req *imagedata.GetImageRequest,
+	stream imagedata.ImageService_GetImageServer,
+) error {
+	bufferSize := int64(10 * 1024 * 1024)
+
+	// Read the file
+	fileData, err := os.ReadFile(req.ImageId)
+	if err != nil {
+		return status.Errorf(codes.NotFound, "failed to read file %s: %v", req.ImageId, err)
+	}
+
+	// Send chunks
+	reader := bytes.NewReader(fileData)
+	buffer := make([]byte, bufferSize)
+
+	for {
+		n, err := reader.Read(buffer)
+		if n > 0 {
+			chunk := &imagedata.ImageChunk{
+				Data: buffer[:n],
+			}
+			if err := stream.Send(chunk); err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *ImgServer) DownloadImages(
@@ -33,7 +71,7 @@ func (s *ImgServer) DownloadImages(
 		// Read the file
 		fileData, err := os.ReadFile(imageID)
 		if err != nil {
-			return fmt.Errorf("failed to read file %s: %v", imageID, err)
+			return status.Errorf(codes.NotFound, "failed to read file %s: %v", imageID, err)
 		}
 
 		// Send header

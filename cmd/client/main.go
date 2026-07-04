@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
@@ -30,7 +31,10 @@ func main() {
 
 	log.Println("Requesting image from server...")
 	// Updated to handle multiple images, defaulting to one as per original cmd/client usage
-	imageMap := client.DownloadImages([]string{"../data/lionheadbig.jpg"})
+	imageMap, err := client.DownloadImages(context.Background(), []string{"../data/lionheadbig.jpg"})
+	if err != nil {
+		log.Fatalf("Failed to download images: %v", err)
+	}
 	imageBytes := imageMap["../data/lionheadbig.jpg"]
 	log.Printf("Received image of size: %d bytes", len(imageBytes))
 

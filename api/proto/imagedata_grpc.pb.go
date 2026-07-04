@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	ImageService_DownloadImages_FullMethodName = "/imagedata.ImageService/DownloadImages"
+	ImageService_GetImage_FullMethodName       = "/imagedata.ImageService/GetImage"
 )
 
 // ImageServiceClient is the client API for ImageService service.
@@ -30,6 +31,9 @@ const (
 type ImageServiceClient interface {
 	// Client makes one request, Server pushes back an active stream of fragments
 	DownloadImages(ctx context.Context, in *GetImagesRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StreamResponse], error)
+	// GetImage is for retrieving a single image, we could use
+	// parallel calls for multiple images
+	GetImage(ctx context.Context, in *GetImageRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ImageChunk], error)
 }
 
 type imageServiceClient struct {
@@ -59,6 +63,25 @@ func (c *imageServiceClient) DownloadImages(ctx context.Context, in *GetImagesRe
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ImageService_DownloadImagesClient = grpc.ServerStreamingClient[StreamResponse]
 
+func (c *imageServiceClient) GetImage(ctx context.Context, in *GetImageRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ImageChunk], error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	stream, err := c.cc.NewStream(ctx, &ImageService_ServiceDesc.Streams[1], ImageService_GetImage_FullMethodName, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &grpc.GenericClientStream[GetImageRequest, ImageChunk]{ClientStream: stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ImageService_GetImageClient = grpc.ServerStreamingClient[ImageChunk]
+
 // ImageServiceServer is the server API for ImageService service.
 // All implementations must embed UnimplementedImageServiceServer
 // for forward compatibility.
@@ -67,6 +90,9 @@ type ImageService_DownloadImagesClient = grpc.ServerStreamingClient[StreamRespon
 type ImageServiceServer interface {
 	// Client makes one request, Server pushes back an active stream of fragments
 	DownloadImages(*GetImagesRequest, grpc.ServerStreamingServer[StreamResponse]) error
+	// GetImage is for retrieving a single image, we could use
+	// parallel calls for multiple images
+	GetImage(*GetImageRequest, grpc.ServerStreamingServer[ImageChunk]) error
 	mustEmbedUnimplementedImageServiceServer()
 }
 
@@ -79,6 +105,9 @@ type UnimplementedImageServiceServer struct{}
 
 func (UnimplementedImageServiceServer) DownloadImages(*GetImagesRequest, grpc.ServerStreamingServer[StreamResponse]) error {
 	return status.Error(codes.Unimplemented, "method DownloadImages not implemented")
+}
+func (UnimplementedImageServiceServer) GetImage(*GetImageRequest, grpc.ServerStreamingServer[ImageChunk]) error {
+	return status.Error(codes.Unimplemented, "method GetImage not implemented")
 }
 func (UnimplementedImageServiceServer) mustEmbedUnimplementedImageServiceServer() {}
 func (UnimplementedImageServiceServer) testEmbeddedByValue()                      {}
@@ -112,6 +141,17 @@ func _ImageService_DownloadImages_Handler(srv interface{}, stream grpc.ServerStr
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type ImageService_DownloadImagesServer = grpc.ServerStreamingServer[StreamResponse]
 
+func _ImageService_GetImage_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetImageRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(ImageServiceServer).GetImage(m, &grpc.GenericServerStream[GetImageRequest, ImageChunk]{ServerStream: stream})
+}
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type ImageService_GetImageServer = grpc.ServerStreamingServer[ImageChunk]
+
 // ImageService_ServiceDesc is the grpc.ServiceDesc for ImageService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -123,6 +163,11 @@ var ImageService_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "DownloadImages",
 			Handler:       _ImageService_DownloadImages_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "GetImage",
+			Handler:       _ImageService_GetImage_Handler,
 			ServerStreams: true,
 		},
 	},

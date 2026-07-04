@@ -21,7 +21,53 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// The request payload to initiate the stream
+// The request payload to initiate the stream for a single image
+type GetImageRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ImageId       string                 `protobuf:"bytes,1,opt,name=image_id,json=imageId,proto3" json:"image_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetImageRequest) Reset() {
+	*x = GetImageRequest{}
+	mi := &file_api_proto_imagedata_proto_msgTypes[0]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetImageRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetImageRequest) ProtoMessage() {}
+
+func (x *GetImageRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_api_proto_imagedata_proto_msgTypes[0]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetImageRequest.ProtoReflect.Descriptor instead.
+func (*GetImageRequest) Descriptor() ([]byte, []int) {
+	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{0}
+}
+
+func (x *GetImageRequest) GetImageId() string {
+	if x != nil {
+		return x.ImageId
+	}
+	return ""
+}
+
+// The request payload to initiate the stream for multiple images
+// to be returned sequentially, one after the other, in a single stream.
 type GetImagesRequest struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	ImageIds          []string               `protobuf:"bytes,1,rep,name=image_ids,json=imageIds,proto3" json:"image_ids,omitempty"`
@@ -32,7 +78,7 @@ type GetImagesRequest struct {
 
 func (x *GetImagesRequest) Reset() {
 	*x = GetImagesRequest{}
-	mi := &file_api_proto_imagedata_proto_msgTypes[0]
+	mi := &file_api_proto_imagedata_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -44,7 +90,7 @@ func (x *GetImagesRequest) String() string {
 func (*GetImagesRequest) ProtoMessage() {}
 
 func (x *GetImagesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_imagedata_proto_msgTypes[0]
+	mi := &file_api_proto_imagedata_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -57,7 +103,7 @@ func (x *GetImagesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetImagesRequest.ProtoReflect.Descriptor instead.
 func (*GetImagesRequest) Descriptor() ([]byte, []int) {
-	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{0}
+	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *GetImagesRequest) GetImageIds() []string {
@@ -84,7 +130,7 @@ type ImageChunk struct {
 
 func (x *ImageChunk) Reset() {
 	*x = ImageChunk{}
-	mi := &file_api_proto_imagedata_proto_msgTypes[1]
+	mi := &file_api_proto_imagedata_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -96,7 +142,7 @@ func (x *ImageChunk) String() string {
 func (*ImageChunk) ProtoMessage() {}
 
 func (x *ImageChunk) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_imagedata_proto_msgTypes[1]
+	mi := &file_api_proto_imagedata_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -109,7 +155,7 @@ func (x *ImageChunk) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageChunk.ProtoReflect.Descriptor instead.
 func (*ImageChunk) Descriptor() ([]byte, []int) {
-	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{1}
+	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ImageChunk) GetData() []byte {
@@ -133,7 +179,7 @@ type ImageHeader struct {
 
 func (x *ImageHeader) Reset() {
 	*x = ImageHeader{}
-	mi := &file_api_proto_imagedata_proto_msgTypes[2]
+	mi := &file_api_proto_imagedata_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -145,7 +191,7 @@ func (x *ImageHeader) String() string {
 func (*ImageHeader) ProtoMessage() {}
 
 func (x *ImageHeader) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_imagedata_proto_msgTypes[2]
+	mi := &file_api_proto_imagedata_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -158,7 +204,7 @@ func (x *ImageHeader) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ImageHeader.ProtoReflect.Descriptor instead.
 func (*ImageHeader) Descriptor() ([]byte, []int) {
-	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{2}
+	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *ImageHeader) GetImageId() string {
@@ -213,7 +259,7 @@ type StreamResponse struct {
 
 func (x *StreamResponse) Reset() {
 	*x = StreamResponse{}
-	mi := &file_api_proto_imagedata_proto_msgTypes[3]
+	mi := &file_api_proto_imagedata_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -225,7 +271,7 @@ func (x *StreamResponse) String() string {
 func (*StreamResponse) ProtoMessage() {}
 
 func (x *StreamResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_api_proto_imagedata_proto_msgTypes[3]
+	mi := &file_api_proto_imagedata_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -238,7 +284,7 @@ func (x *StreamResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use StreamResponse.ProtoReflect.Descriptor instead.
 func (*StreamResponse) Descriptor() ([]byte, []int) {
-	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{3}
+	return file_api_proto_imagedata_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *StreamResponse) GetPayload() isStreamResponse_Payload {
@@ -286,7 +332,9 @@ var File_api_proto_imagedata_proto protoreflect.FileDescriptor
 
 const file_api_proto_imagedata_proto_rawDesc = "" +
 	"\n" +
-	"\x19api/proto/imagedata.proto\x12\timagedata\"^\n" +
+	"\x19api/proto/imagedata.proto\x12\timagedata\",\n" +
+	"\x0fGetImageRequest\x12\x19\n" +
+	"\bimage_id\x18\x01 \x01(\tR\aimageId\"^\n" +
 	"\x10GetImagesRequest\x12\x1b\n" +
 	"\timage_ids\x18\x01 \x03(\tR\bimageIds\x12-\n" +
 	"\x12quality_preference\x18\x02 \x01(\tR\x11qualityPreference\" \n" +
@@ -303,9 +351,10 @@ const file_api_proto_imagedata_proto_rawDesc = "" +
 	"\x0eStreamResponse\x120\n" +
 	"\x06header\x18\x01 \x01(\v2\x16.imagedata.ImageHeaderH\x00R\x06header\x12-\n" +
 	"\x05chunk\x18\x02 \x01(\v2\x15.imagedata.ImageChunkH\x00R\x05chunkB\t\n" +
-	"\apayload2Z\n" +
+	"\apayload2\x9b\x01\n" +
 	"\fImageService\x12J\n" +
-	"\x0eDownloadImages\x12\x1b.imagedata.GetImagesRequest\x1a\x19.imagedata.StreamResponse0\x01B0Z.github.com/MelleKoning/transferspeed/api/protob\x06proto3"
+	"\x0eDownloadImages\x12\x1b.imagedata.GetImagesRequest\x1a\x19.imagedata.StreamResponse0\x01\x12?\n" +
+	"\bGetImage\x12\x1a.imagedata.GetImageRequest\x1a\x15.imagedata.ImageChunk0\x01B0Z.github.com/MelleKoning/transferspeed/api/protob\x06proto3"
 
 var (
 	file_api_proto_imagedata_proto_rawDescOnce sync.Once
@@ -319,20 +368,23 @@ func file_api_proto_imagedata_proto_rawDescGZIP() []byte {
 	return file_api_proto_imagedata_proto_rawDescData
 }
 
-var file_api_proto_imagedata_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_api_proto_imagedata_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_api_proto_imagedata_proto_goTypes = []any{
-	(*GetImagesRequest)(nil), // 0: imagedata.GetImagesRequest
-	(*ImageChunk)(nil),       // 1: imagedata.ImageChunk
-	(*ImageHeader)(nil),      // 2: imagedata.ImageHeader
-	(*StreamResponse)(nil),   // 3: imagedata.StreamResponse
+	(*GetImageRequest)(nil),  // 0: imagedata.GetImageRequest
+	(*GetImagesRequest)(nil), // 1: imagedata.GetImagesRequest
+	(*ImageChunk)(nil),       // 2: imagedata.ImageChunk
+	(*ImageHeader)(nil),      // 3: imagedata.ImageHeader
+	(*StreamResponse)(nil),   // 4: imagedata.StreamResponse
 }
 var file_api_proto_imagedata_proto_depIdxs = []int32{
-	2, // 0: imagedata.StreamResponse.header:type_name -> imagedata.ImageHeader
-	1, // 1: imagedata.StreamResponse.chunk:type_name -> imagedata.ImageChunk
-	0, // 2: imagedata.ImageService.DownloadImages:input_type -> imagedata.GetImagesRequest
-	3, // 3: imagedata.ImageService.DownloadImages:output_type -> imagedata.StreamResponse
-	3, // [3:4] is the sub-list for method output_type
-	2, // [2:3] is the sub-list for method input_type
+	3, // 0: imagedata.StreamResponse.header:type_name -> imagedata.ImageHeader
+	2, // 1: imagedata.StreamResponse.chunk:type_name -> imagedata.ImageChunk
+	1, // 2: imagedata.ImageService.DownloadImages:input_type -> imagedata.GetImagesRequest
+	0, // 3: imagedata.ImageService.GetImage:input_type -> imagedata.GetImageRequest
+	4, // 4: imagedata.ImageService.DownloadImages:output_type -> imagedata.StreamResponse
+	2, // 5: imagedata.ImageService.GetImage:output_type -> imagedata.ImageChunk
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -343,7 +395,7 @@ func file_api_proto_imagedata_proto_init() {
 	if File_api_proto_imagedata_proto != nil {
 		return
 	}
-	file_api_proto_imagedata_proto_msgTypes[3].OneofWrappers = []any{
+	file_api_proto_imagedata_proto_msgTypes[4].OneofWrappers = []any{
 		(*StreamResponse_Header)(nil),
 		(*StreamResponse_Chunk)(nil),
 	}
@@ -353,7 +405,7 @@ func file_api_proto_imagedata_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_api_proto_imagedata_proto_rawDesc), len(file_api_proto_imagedata_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

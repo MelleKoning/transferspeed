@@ -37,18 +37,46 @@ func New(address string) (*ImageStreamer, func() error) {
 func (imgsvcclient *ImageStreamer) Close() error {
 	return imgsvcclient.conn.Close()
 }
-func (imgsvcclient *ImageStreamer) DownloadImages(imageIDs []string) map[string][]byte {
+func (imgsvcclient *ImageStreamer) GetImage(ctx context.Context, imageID string) ([]byte, error) {
+	request := &imagedata.GetImageRequest{
+		ImageId: imageID,
+	}
+
+	stream, err := imgsvcclient.requestclient.GetImage(
+		ctx,
+		request,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var data []byte
+	for {
+		chunk, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		data = append(data, chunk.Data...)
+	}
+
+	return data, nil
+}
+
+func (imgsvcclient *ImageStreamer) DownloadImages(ctx context.Context, imageIDs []string) (map[string][]byte, error) {
 	// Create a request
 	request := &imagedata.GetImagesRequest{
 		ImageIds: imageIDs,
 	}
 	// Make the gRPC request
 	stream, err := imgsvcclient.requestclient.DownloadImages(
-		context.Background(),
+		ctx,
 		request,
 	)
 	if err != nil {
-		log.Fatalf("Failed to get images: %v", err)
+		return nil, err
 	}
 
 	results := make(map[string][]byte)
@@ -61,7 +89,7 @@ func (imgsvcclient *ImageStreamer) DownloadImages(imageIDs []string) map[string]
 			if err == io.EOF {
 				break
 			}
-			log.Fatalf("Failed to receive image chunk: %v", err)
+			return nil, err
 		}
 
 		switch p := response.Payload.(type) {
@@ -70,11 +98,11 @@ func (imgsvcclient *ImageStreamer) DownloadImages(imageIDs []string) map[string]
 			results[currentImageID] = []byte{}
 		case *imagedata.StreamResponse_Chunk:
 			if currentImageID == "" {
-				log.Fatal("Received chunk before header")
+				return nil, io.ErrUnexpectedEOF
 			}
 			results[currentImageID] = append(results[currentImageID], p.Chunk.Data...)
 		}
 	}
 
-	return results
+	return results, nil
 }
