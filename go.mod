@@ -3,6 +3,7 @@ module github.com/MelleKoning/transferspeed
 go 1.24.6
 
 require (
+	github.com/kouhin/envflag v0.0.0-20150818174321-0e9a86061649
 	google.golang.org/grpc v1.75.0
 	google.golang.org/protobuf v1.36.6
 )

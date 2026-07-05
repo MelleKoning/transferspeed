@@ -15,6 +15,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// how much bytes to send in one chunk
+const bufferSize = 1 * 1024 * 1024
+const maxMessageSize = bufferSize + 64*1024
+
 type ImgServer struct {
 	imagedata.UnimplementedImageServiceServer
 }
@@ -27,7 +31,6 @@ func (s *ImgServer) GetImage(
 	req *imagedata.GetImageRequest,
 	stream imagedata.ImageService_GetImageServer,
 ) error {
-	bufferSize := int64(10 * 1024 * 1024)
 
 	// Read the file
 	fileData, err := os.ReadFile(req.ImageId)
@@ -64,9 +67,6 @@ func (s *ImgServer) DownloadImages(
 	req *imagedata.GetImagesRequest,
 	stream imagedata.ImageService_DownloadImagesServer,
 ) error {
-	// how much to send in one stream message
-	bufferSize := int64(10 * 1024 * 1024)
-
 	for _, imageID := range req.ImageIds {
 		// Read the file
 		fileData, err := os.ReadFile(imageID)
@@ -122,8 +122,8 @@ func NewImageServer(port string) (imagedata.ImageServiceServer, func() error, er
 	}
 
 	s := grpc.NewServer(
-		grpc.MaxRecvMsgSize(1024*1024*10),
-		grpc.MaxSendMsgSize(1024*1024*10),
+		grpc.MaxRecvMsgSize(maxMessageSize),
+		grpc.MaxSendMsgSize(maxMessageSize),
 	)
 	imgServer := New()
 	imagedata.RegisterImageServiceServer(s, imgServer)

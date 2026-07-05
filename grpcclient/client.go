@@ -10,6 +10,9 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 )
 
+const bufferSize = 1 * 1024 * 1024 // 1 MB
+const maxMessageSize = bufferSize + 64*1024
+
 type ImageStreamer struct {
 	conn          *grpc.ClientConn
 	requestclient imagedata.ImageServiceClient
@@ -19,7 +22,7 @@ func New(address string) (*ImageStreamer, func() error) {
 	// Set up a connection to the server
 	conn, err := grpc.NewClient(address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(1024*1024*10)))
+		grpc.WithDefaultCallOptions(grpc.MaxCallRecvMsgSize(maxMessageSize)))
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
