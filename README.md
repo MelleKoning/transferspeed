@@ -40,3 +40,11 @@ Output of benchmark tests with the bigger image:
 BenchmarkTestgRPCClientWithServer-8  16          72828138 ns/op                69.86 ms/op
 BenchmarkTesthttpClientWithServer-8  25          45018124 ns/op                42.09 ms/op
 ```
+
+You can also host the servers as a docker container, to see if the connection from clients to a docker container is as fast as just spinning up the server within the tests.
+
+To run the benchmark tests against the docker container, start `docker-compose.yml`and run
+
+```bash
+DATA_DIR=/data/ USE_EXTERNAL_SERVER=true HTTP_SERVER_PORT=8008 GRPC_SERVER_ADDR=:50051 GRPC_SERVER_PORT=:50051 go test ./... -v -bench=.
+```

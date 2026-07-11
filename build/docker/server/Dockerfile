@@ -20,5 +20,6 @@ COPY --from=builder /server /server
 
 # Copy the data file
 COPY data/lionface.jpg data/lionface.jpg
+COPY data/lionheadbig.jpg data/lionheadbig.jpg
 
 ENTRYPOINT ["/server"]

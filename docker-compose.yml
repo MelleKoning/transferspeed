@@ -1,9 +1,12 @@
 version: '3.8'
 services:
   transferspeedserver:
+    network_mode: host
     image: transferspeedserver
     environment:
       - GRPC_PORT=:50051
+    volumes:
+      - ./data:/data  # Mounts host data folder to /data in container
   transferspeedclient:
     image: transferspeedclient
     dns:
