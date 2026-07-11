@@ -3,12 +3,44 @@ package httpclient_test
 import (
 	"bytes"
 	"os"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/MelleKoning/transferspeed/httpclient"
 	"github.com/MelleKoning/transferspeed/httpserver"
 )
+
+const defaultHTTPExternalPort = 8008
+
+// setupHTTPServer starts a local HTTP server unless USE_EXTERNAL_SERVER is set,
+// in which case it is a no-op (the test connects to an already-running server).
+func setupHTTPServer(tb testing.TB, port int) func() {
+	if os.Getenv("USE_EXTERNAL_SERVER") == "true" {
+		return func() {}
+	}
+	httpServer, err := httpserver.New(port)
+	if err != nil {
+		tb.Fatalf("could not start local server: %v", err)
+	}
+	time.Sleep(100 * time.Millisecond)
+	return func() {
+		if err := httpServer.Close(); err != nil {
+			tb.Errorf("failed to close server: %v", err)
+		}
+	}
+}
+
+// getPort returns the port to connect to: HTTP_SERVER_PORT if set, otherwise defaultPort.
+func getPort(defaultPort int) int {
+	if p := os.Getenv("HTTP_SERVER_PORT"); p != "" {
+		if v, err := strconv.Atoi(strings.TrimPrefix(p, ":")); err == nil {
+			return v
+		}
+	}
+	return defaultPort
+}
 
 func TestServerAndClient(t *testing.T) {
 	testfile := "../data/lionheadbig.jpg"
@@ -17,19 +49,8 @@ func TestServerAndClient(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	serverPort := 3333
-	httpServer, err := httpserver.New(serverPort)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer func() {
-		err := httpServer.Close()
-		if err != nil {
-			t.Fatal(err)
-		}
-	}()
-
-	time.Sleep(100 * time.Millisecond)
+	serverPort := getPort(3333)
+	defer setupHTTPServer(t, 3333)()
 
 	client := httpclient.GetHTTPClient()
 	defer client.CloseIdleConnections()
@@ -54,19 +75,8 @@ func BenchmarkTesthttpClientWithServer(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	serverPort := 3333
-	httpServer, err := httpserver.New(serverPort)
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer func() {
-		err := httpServer.Close()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}()
-
-	time.Sleep(100 * time.Millisecond)
+	serverPort := getPort(3333)
+	defer setupHTTPServer(b, 3333)()
 
 	client := httpclient.GetHTTPClient()
 	defer client.CloseIdleConnections()
@@ -95,17 +105,8 @@ func BenchmarkTesthttpClientWithServerTwoFiles(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	serverPort := 3333
-	httpServer, err := httpserver.New(serverPort)
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer func() {
-		err := httpServer.Close()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}()
+	serverPort := getPort(3333)
+	defer setupHTTPServer(b, 3333)()
 
 	client := httpclient.GetHTTPClient()
 	defer client.CloseIdleConnections()
@@ -136,17 +137,8 @@ func BenchmarkTesthttpClient10ImageRequests(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	serverPort := 3333
-	httpServer, err := httpserver.New(serverPort)
-	if err != nil {
-		b.Fatal(err)
-	}
-	defer func() {
-		err := httpServer.Close()
-		if err != nil {
-			b.Fatal(err)
-		}
-	}()
+	serverPort := getPort(3333)
+	defer setupHTTPServer(b, 3333)()
 
 	client := httpclient.GetHTTPClient()
 	defer client.CloseIdleConnections()
@@ -156,10 +148,11 @@ func BenchmarkTesthttpClient10ImageRequests(b *testing.B) {
 		file2: loadfile2,
 	}
 
+	const requestsPerBatch = 10
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		paths := make([]string, 0, 10)
-		for i := 0; i < 5; i++ {
+		paths := make([]string, 0, requestsPerBatch)
+		for i := 0; i < requestsPerBatch/2; i++ {
 			paths = append(paths, file1, file2)
 		}
 		for _, p := range paths {
@@ -169,5 +162,8 @@ func BenchmarkTesthttpClient10ImageRequests(b *testing.B) {
 			}
 		}
 	}
-	b.ReportMetric(float64(b.Elapsed()/time.Duration(b.N))/float64(1e6), "ms/op")
+	// Per iteration (batch of 10 sequential requests):
+	b.ReportMetric(float64(b.Elapsed())/float64(b.N)/1e6, "ms/batch")
+	// Amortized wall-clock cost per transferred file (throughput view):
+	b.ReportMetric(float64(b.Elapsed())/float64(b.N*requestsPerBatch)/1e6, "ms/file")
 }
